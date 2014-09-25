@@ -29,7 +29,7 @@ def parse_args():
 def bing_search(query, limit, key, **kwargs):
     ''' Make the search '''
     username = ''
-    baseURL = 'https://api.datamarket.azure.com/Bing/SearchWeb/'
+    baseURL = 'https://api.datamarket.azure.com/Bing/Search/'
     limit = str(limit)
     query = urllib.quote(query)
     user_agent = 'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; Trident/4.0; FDM; .NET CLR 2.0.50727; InfoPath.2; .NET CLR 1.1.4322)'
@@ -41,7 +41,10 @@ def bing_search(query, limit, key, **kwargs):
     handler = urllib2.HTTPBasicAuthHandler(password_mgr)
     opener = urllib2.build_opener(handler)
     urllib2.install_opener(opener)
-    readURL = urllib2.urlopen(url, timeout=90).read()
+    try:
+        readURL = urllib2.urlopen(url, timeout=90).read()
+    except Exception as e:
+        sys.exit('[-] Failed to fetch bing results. Are you sure you have the right API key?')
     return readURL
 
 def action(result):
