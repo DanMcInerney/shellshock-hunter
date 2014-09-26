@@ -22,20 +22,20 @@ def parse_args():
    ''' Create the arguments '''
    parser = argparse.ArgumentParser()
    parser.add_argument("-s", "--search", help="Search terms")
-   parser.add_argument("-l", "--limit", default="100", help="Limit number of results")
+   parser.add_argument("-p", "--pages", default="1", help="Number of pages of results to fetch where there's 50 results per page; defaults to 1")
    parser.add_argument("-k", "--key", help="Your Bing API key found at https://datamarket.azure.com/account")
    return parser.parse_args()
 
-def bing_search(query, limit, key, **kwargs):
+def bing_search(query, key, offset, **kwargs):
     ''' Make the search '''
     username = ''
     baseURL = 'https://api.datamarket.azure.com/Bing/Search/'
-    limit = str(limit)
     query = urllib.quote(query)
     user_agent = 'Mozilla/4.0 (compatible; MSIE 7.0; Windows NT 5.1; Trident/4.0; FDM; .NET CLR 2.0.50727; InfoPath.2; .NET CLR 1.1.4322)'
     credentials = (':%s' % key).encode('base64')[:-1]
     auth = 'Basic %s' % credentials
-    url = baseURL+'Web?Query=%27'+query+'%27&$top='+limit+'&$format=json'
+    url = baseURL+'Web?Query=%27'+query+'%27&$top=50&$format=json&$skip='+offset
+    print '[*] Fetching '+url
     password_mgr = urllib2.HTTPPasswordMgrWithDefaultRealm()
     password_mgr.add_password(None, url, username, key)
     handler = urllib2.HTTPBasicAuthHandler(password_mgr)
@@ -68,7 +68,7 @@ def action(result):
 
 def result_concurrency(results):
     ''' Open all the greenlet threads '''
-    in_parallel = 50
+    in_parallel = 100
     pool = Pool(in_parallel)
     jobs = [pool.spawn(action, result) for result in results]
     return joinall(jobs)
@@ -81,13 +81,23 @@ def main():
         sys.exit('[!] Specify a Bing API key or get one here: https://datamarket.azure.com/dataset/bing/search')
     key = args.key
     query = args.search
-    limit = int(args.limit)
-    response = bing_search(query, limit, key)
-    results = json.loads(response)['d']['results']
-    print 'Results from this query: ' + str(len(results))
-    result_concurrency(results)
+    pages = int(args.pages)
+    offset = 0
+    total_results = []
+    for x in xrange(pages):
+        # Start off with offset = 0
+        if x != 0:
+            offset += 50
+        response = bing_search(query, key, str(offset))
+        results = json.loads(response)['d']['results']
+        if len(results) == 0:
+            print '[-] No more results found'
+            break
+        total_results += results
+    print '[*] Total results: %d' % len(total_results)
+    result_concurrency(total_results)
     if not VULN_FOUND:
-        print 'No vulnerable sites found'
+        print '[-] No vulnerable sites found'
 
 if __name__ == "__main__":
     main()
