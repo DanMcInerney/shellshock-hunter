@@ -27,3 +27,10 @@ Output will look like:
 ``` shell
 [!] SHELLSHOCK VULNERABLE: http://domain.com/cgi-bin/script.sh
 ```
+
+Bing Dorks
+-----
+instreamset:(url):cgi-bin filetype:sh  
+instreamset:(url):cgi-bin "GATEWAY_INTERFACE = CGI"
+instreamset:(url):server-status intitle:apache "cgi-bin"
+instreamset:(url):cgi-bin ext:cgi
